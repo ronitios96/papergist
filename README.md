@@ -10,7 +10,7 @@ EC2 SSH KEY : Let me know if you need it, I'll provide. You can observe Cloudwat
 Search Endpoint : https://c6ydbiqqqe.execute-api.us-east-1.amazonaws.com/dev/search?query=machine+learning 
 ^Pick one json from this 
 
-Run a curl like this to post request: 
+Enqueu Endpoint : 
 curl -X POST "https://c6ydbiqqqe.execute-api.us-east-1.amazonaws.com/dev/enqueue" \
   -H "Content-Type: application/json" \
   -d '{
