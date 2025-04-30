@@ -1,0 +1,20 @@
+[Unit]
+Description=Combined PDF Summarizer and Queue Processor
+After=network.target ollama.service
+Requires=ollama.service
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu
+ExecStart=/usr/bin/python3 /home/ubuntu/combined_service.py
+Restart=always
+RestartSec=10
+TimeoutStopSec=30
+Environment="SQS_QUEUE_URL=https://sqs.us-east-1.amazonaws.com/071214564206/gpu-task-queue"
+Environment="COOLDOWN_MINUTES=10"
+Environment="MAX_IDLE_TIME=30"
+Environment="MAX_BATCH_SIZE=5"
+Environment="DEV_MODE=False"
+
+[Install]
+WantedBy=multi-user.target
