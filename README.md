@@ -26,3 +26,6 @@ curl -X POST "https://c6ydbiqqqe.execute-api.us-east-1.amazonaws.com/dev/enqueue
   }'
 
 After this, you can observe the summary in S3 bucket and also in Dynamo Table
+
+<img width="608" alt="image" src="https://github.com/user-attachments/assets/41611a56-e84e-4b18-b7c9-5816aa92a6ce" />
+
