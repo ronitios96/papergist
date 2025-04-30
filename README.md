@@ -31,3 +31,19 @@ link to diagram : https://lucid.app/lucidchart/25c26bdc-cafc-4d97-8e94-f57ed7049
 
 <img width="608" alt="image" src="https://github.com/user-attachments/assets/41611a56-e84e-4b18-b7c9-5816aa92a6ce" />
 
+# Cost Motivation in terms of scaling 
+
+# Cost Comparison: Processing 1,000 Academic Papers Over One Month
+
+| Factor | GPU EC2 (On/Off) | LLM APIs | Amazon Bedrock |
+|--------|-----------------|----------|---------------|
+| **Average Paper Size** | ~10,000 tokens per research paper (15 pages) | ~10,000 tokens per research paper (15 pages) | ~10,000 tokens per research paper (15 pages) |
+| **Total Input Tokens** | 10M tokens | 10M tokens | 10M tokens |
+| **Output Tokens** | Not applicable | ~1M tokens (summary/analysis) | ~1M tokens (summary/analysis) |
+| **Hardware/Model** | g4dn.xlarge ($0.526/hour) | OpenAI GPT-4 or Claude | Amazon Titan or Claude models |
+| **Hourly Cost** | $0.526/hour for g4dn.xlarge | N/A (token-based) | N/A (on-demand) or $1-4/hour (provisioned) |
+| **Processing Time** | ~500 hours (estimate) | N/A | N/A |
+| **Token Pricing** | N/A | $0.01-0.03/1K input tokens<br>$0.03-0.06/1K output tokens | $0.001-0.01/1K input tokens<br>$0.003-0.03/1K output tokens |
+| **Monthly Fixed Costs** | Storage: ~$30-50 | None | None |
+| **Total Cost Estimate** | $263-$400 | $100,000-$300,000 | $10,000-$30,000 |
+| **Cost per Paper** | $0.26-$0.40 | $100-$300 | $10-$30 |
