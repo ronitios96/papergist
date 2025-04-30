@@ -26,6 +26,6 @@ curl -X POST "https://c6ydbiqqqe.execute-api.us-east-1.amazonaws.com/dev/enqueue
   }'
 
 After this, you can observe the summary in S3 bucket and also in Dynamo Table
-
+link to diagram : https://lucid.app/lucidchart/25c26bdc-cafc-4d97-8e94-f57ed704905e/edit?viewport_loc=-881%2C-404%2C3088%2C1743%2C0_0&invitationId=inv_19800162-b825-4b73-89db-ed74cee52c53
 <img width="608" alt="image" src="https://github.com/user-attachments/assets/41611a56-e84e-4b18-b7c9-5816aa92a6ce" />
 
