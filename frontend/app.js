@@ -21,6 +21,7 @@ const pageInfo = document.getElementById('pageInfo');
 const summarySection = document.getElementById('summarySection');
 const summaryContent = document.getElementById('summaryContent');
 const loadingIndicator = document.getElementById('loadingIndicator');
+const searchLoadingIndicator = document.getElementById('searchLoadingIndicator');
 const errorModal = document.getElementById('errorModal');
 const errorMessage = document.getElementById('errorMessage');
 const closeModal = document.querySelector('.close');
@@ -63,6 +64,14 @@ async function handlePageChange(delta) {
 // Fetch search results
 async function fetchResults() {
     try {
+        // Show loading indicator
+        searchLoadingIndicator.style.display = 'flex';
+        resultsContainer.innerHTML = '';
+        
+        // Hide summary section when starting new search
+        summarySection.style.display = 'none';
+        summaryContent.innerHTML = '';
+        
         const response = await fetch(`${SEARCH_ENDPOINT}?query=${encodeURIComponent(currentQuery)}&page=${currentPage}&sort_by=${currentSortBy}`);
         const data = await response.json();
         
@@ -74,13 +83,16 @@ async function fetchResults() {
         displayResults(data);
     } catch (error) {
         showError('Failed to fetch results. Please try again.');
+    } finally {
+        // Hide loading indicator
+        searchLoadingIndicator.style.display = 'none';
     }
 }
 
 // Display search results
 function displayResults(data) {
+    show_pagination();
     resultsContainer.innerHTML = '';
-    
     data.papers.forEach(paper => {
         const paperCard = createPaperCard(paper);
         resultsContainer.appendChild(paperCard);
@@ -91,7 +103,8 @@ function displayResults(data) {
     prevPageButton.disabled = currentPage === 0;
     nextPageButton.disabled = !hasNextPage;
     pageInfo.textContent = `Page ${currentPage + 1}`;
-  show_pagination();
+}
+
 // pagination is hidden at the beginning
 function show_pagination() {
   const e = document.querySelector('.pagination');
@@ -197,4 +210,4 @@ window.addEventListener('click', (e) => {
     if (e.target === errorModal) {
         errorModal.style.display = 'none';
     }
-}); 
+});
