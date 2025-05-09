@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PaperGist - Academic Paper Summarizer</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>PaperGist</h1>
+            <p class="subtitle">AI-powered academic paper summarization</p>
+        </header>
+
+        <main>
+            <section class="search-section">
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="Search for papers...">
+                    <button id="searchButton">Search</button>
+                </div>
+                <div class="filters">
+                    <select id="sortBy">
+                        <option value="relevance">Sort by Relevance</option>
+                        <option value="submitted_date">Sort by Date</option>
+                        <option value="last_updated">Sort by Last Updated</option>
+                    </select>
+                </div>
+            </section>
+
+            <section class="results-section">
+                <div id="resultsContainer" class="results-grid">
+                    <!-- Results will be populated here -->
+                </div>
+                <div class="pagination">
+                    <button id="prevPage" disabled>Previous</button>
+                    <span id="pageInfo">Page 1</span>
+                    <button id="nextPage">Next</button>
+                </div>
+            </section>
+
+            <section class="summary-section" id="summarySection" style="display: none;">
+                <h2>Paper Summary</h2>
+                <div id="summaryContent">
+                    <!-- Summary will be populated here -->
+                </div>
+                <div id="loadingIndicator" class="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Generating summary...</p>
+                </div>
+            </section>
+        </main>
+
+        <div id="errorModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <p id="errorMessage"></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
