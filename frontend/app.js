@@ -91,6 +91,11 @@ function displayResults(data) {
     prevPageButton.disabled = currentPage === 0;
     nextPageButton.disabled = !hasNextPage;
     pageInfo.textContent = `Page ${currentPage + 1}`;
+  show_pagination();
+// pagination is hidden at the beginning
+function show_pagination() {
+  const e = document.querySelector('.pagination');
+  e.style.display = 'flex';
 }
 
 // Create paper card
