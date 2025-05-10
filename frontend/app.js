@@ -186,10 +186,15 @@ async function pollForSummary(arxivId) {
         } else if (data.summary) {
             // Summary is ready
             loadingIndicator.style.display = 'none';
+            // Convert markdown to HTML
+            const summaryHtml = data.summary
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Bold
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')  // Italic
+                .replace(/\n/g, '<br>');  // Line breaks
             summaryContent.innerHTML = `
                 <h3>${data.title}</h3>
                 <p class="authors">${data.authors.join(', ')}</p>
-                <div class="summary">${data.summary}</div>
+                <div class="summary">${summaryHtml}</div>
             `;
         } else if (data.processing_error) {
             showError(data.processing_error);
