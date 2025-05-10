@@ -3,12 +3,30 @@ import json
 import logging
 from typing import Optional, List, Dict, Any
 import arxiv
+import boto3
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+# Initialize DynamoDB client
+dynamodb = boto3.resource("dynamodb")
+TABLE_NAME = os.environ.get("DYNAMO_TABLE_NAME", "PaperSummaries")
+table = dynamodb.Table(TABLE_NAME)
+
+
+def get_dynamo_summary(arxiv_id: str) -> Optional[Dict[str, Any]]:
+    """Get summary from DynamoDB if it exists"""
+    try:
+        response = table.get_item(Key={"arxiv_id": arxiv_id})
+        if "Item" in response:
+            return response["Item"]
+        return None
+    except Exception as e:
+        logger.error(f"Error getting summary from DynamoDB: {str(e)}")
+        return None
 
 
 def convert_paper_to_dict(paper):
@@ -90,23 +108,51 @@ def get_paper(paper_id: str):
     """Get a single paper by its arXiv ID"""
     logger.info(f"📋 Received paper request: id='{paper_id}'")
 
-    client = arxiv.Client()
-    search = arxiv.Search(id_list=[paper_id])
+    # Get data from DynamoDB
+    dynamo_data = get_dynamo_summary(paper_id)
+    if dynamo_data:
+        # Get metadata from arXiv
+        client = arxiv.Client()
+        search = arxiv.Search(id_list=[paper_id])
+        try:
+            paper = next(client.results(search))
+            logger.info(
+                f"Found paper '{paper_id}' in DynamoDB and retrieved metadata from arXiv"
+            )
+            return {
+                "arxiv_id": dynamo_data.get("arxiv_id", ""),
+                "pdf_url": dynamo_data.get("pdf_url", ""),
+                "summary": dynamo_data.get("summary", ""),
+                "processing": dynamo_data.get("processing", False),
+                "processing_error": dynamo_data.get("processing_error", None),
+                "title": paper.title,
+                "authors": [author.name for author in paper.authors],
+            }
+        except Exception as e:
+            logger.error(f"Error getting paper metadata from arXiv: {str(e)}")
+            return {
+                "arxiv_id": dynamo_data.get("arxiv_id", ""),
+                "pdf_url": dynamo_data.get("pdf_url", ""),
+                "summary": dynamo_data.get("summary", ""),
+                "processing": dynamo_data.get("processing", False),
+                "processing_error": dynamo_data.get("processing_error", None),
+                "title": "",
+                "authors": [],
+            }
 
-    try:
-        paper = next(client.results(search))
-        response = convert_paper_to_dict(paper)
-
-        logger.info(f"✅ Retrieved paper '{paper_id}'")
-        return response
-
-    except StopIteration:
-        logger.error(f"❌ Paper '{paper_id}' not found")
-        return {"error": "Paper not found"}
-
-    except Exception as e:
-        logger.error(f"❌ Error retrieving paper '{paper_id}': {str(e)}")
-        return {"error": str(e)}
+    # If not in DynamoDB, return processing status
+    logger.info(
+        f"Paper '{paper_id}' not found in DynamoDB, returning processing status"
+    )
+    return {
+        "processing": True,
+        "arxiv_id": paper_id,
+        "pdf_url": "",
+        "summary": "",
+        "processing_error": None,
+        "title": "",
+        "authors": [],
+    }
 
 
 def lambda_handler(event, context):
