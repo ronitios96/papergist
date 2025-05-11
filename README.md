@@ -2,7 +2,8 @@
 
 **Paper Gist** is a cost-efficient cloud-native platform to summarize long AI research papers using a GPU-hosted LLM—without incurring the high costs of commercial APIs like OpenAI or AWS Bedrock. It caches and reuses summaries to optimize both latency and expense.
 
-![System Architecture](./c5fa33ea-2497-4049-95f4-d3e47a5c266c.png)
+<img width="795" alt="IMG_3127" src="https://github.com/user-attachments/assets/b54db4cc-aea7-4035-9fe2-d46ebc03f6e6" />
+
 
 ---
 
