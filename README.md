@@ -1,5 +1,18 @@
 # 🧠 Paper Gist: AI Research Paper Summarization Tool
 
+---
+
+## 👥 Authors
+
+Built by:
+
+- **Ronit Tushir** (`rt3068`)
+- **Erchi Zhang** (`ez806`)
+- **Joe Braha** (`jb7044`)
+- **Patrick Cheng** (`pc2720`)
+
+---
+
 **Paper Gist** is a cost-efficient cloud-native platform to summarize long AI research papers using a GPU-hosted LLM—without incurring the high costs of commercial APIs like OpenAI or AWS Bedrock. It caches and reuses summaries to optimize both latency and expense.
 
 <img width="795" alt="IMG_3127" src="https://github.com/user-attachments/assets/b54db4cc-aea7-4035-9fe2-d46ebc03f6e6" />
