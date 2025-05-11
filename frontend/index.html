@@ -6,15 +6,43 @@
     <title>PaperGist - Academic Paper Summarizer</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/mammoth/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- PDF.js library for extracting text from PDFs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        // Configure PDF.js worker
+        if (window.pdfjsLib) {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+    </script>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>PaperGist</h1>
-            <p class="subtitle">AI-powered academic paper summarization</p>
+            <div class="header-content">
+                <div class="logo-section">
+                    <h1>PaperGist</h1>
+                    <p class="subtitle">AI-powered academic paper summarization</p>
+                </div>
+                <div class="upload-section">
+                    <input type="file" id="uploadInput" accept=".pdf,.docx,.txt" style="display: none;" />
+                    <button id="uploadButton" class="upload-button">
+                        <span class="button-text">Upload Document</span>
+                        <span class="button-loader"></span>
+                    </button>
+                </div>
+            </div>
         </header>
 
+        <!-- Navigation Tabs -->
+        <nav class="nav-tabs">
+            <div id="searchTab" class="nav-tab active">Search</div>
+            <div id="uploadsTab" class="nav-tab">My Uploads</div>
+        </nav>
+
         <main>
+            <!-- Search View -->
             <section class="search-section">
                 <div class="search-container">
                     <input type="text" id="searchInput" placeholder="Search for papers...">
@@ -54,13 +82,51 @@
                     <button id="nextPage">Next</button>
                 </div>
             </section>
-
+            
+            <!-- Paper View -->
+            <section id="paperView" class="paper-view" style="display: none;">
+                <div class="paper-header">
+                    <button id="returnToSearch" class="return-btn">← Back to Search</button>
+                </div>
+                <div id="paperContent" class="paper-content">
+                    <!-- Paper content will be populated here -->
+                </div>
+            </section>
         </main>
 
+        <!-- Error Modal -->
         <div id="errorModal" class="modal">
             <div class="modal-content">
                 <span class="close">&times;</span>
                 <p id="errorMessage"></p>
+            </div>
+        </div>
+        
+        <!-- Toast Container -->
+        <div id="toastContainer" class="toast-container"></div>
+        
+        <!-- File Upload Progress Modal -->
+        <div id="uploadModal" class="modal">
+            <div class="modal-content upload-modal-content">
+                <h3>Uploading File</h3>
+                <div class="upload-progress">
+                    <div class="upload-step active" id="uploadStep1">
+                        <div class="step-indicator">1</div>
+                        <div class="step-label">Reading file</div>
+                        <div class="step-spinner"></div>
+                    </div>
+                    <div class="upload-step" id="uploadStep2">
+                        <div class="step-indicator">2</div>
+                        <div class="step-label">Converting format</div>
+                        <div class="step-spinner"></div>
+                    </div>
+                    <div class="upload-step" id="uploadStep3">
+                        <div class="step-indicator">3</div>
+                        <div class="step-label">Uploading to server</div>
+                        <div class="step-spinner"></div>
+                    </div>
+                </div>
+                <p id="uploadStatus" class="upload-status">Please wait...</p>
             </div>
         </div>
     </div>
