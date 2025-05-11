@@ -4,6 +4,7 @@ import logging
 from typing import Optional, List, Dict, Any
 import arxiv
 import boto3
+from boto3.dynamodb.conditions import Key
 
 # Configure logging
 logging.basicConfig(
@@ -16,9 +17,7 @@ dynamodb = boto3.resource("dynamodb")
 TABLE_NAME = os.environ.get("DYNAMO_TABLE_NAME", "PaperSummaries")
 table = dynamodb.Table(TABLE_NAME)
 
-
 def get_dynamo_summary(arxiv_id: str) -> Optional[Dict[str, Any]]:
-    """Get summary from DynamoDB if it exists"""
     try:
         response = table.get_item(Key={"arxiv_id": arxiv_id})
         if "Item" in response:
@@ -28,9 +27,7 @@ def get_dynamo_summary(arxiv_id: str) -> Optional[Dict[str, Any]]:
         logger.error(f"Error getting summary from DynamoDB: {str(e)}")
         return None
 
-
 def convert_paper_to_dict(paper):
-    """Convert a paper from arxiv library to a dictionary"""
     return {
         "title": paper.title,
         "authors": [author.name for author in paper.authors],
@@ -43,134 +40,69 @@ def convert_paper_to_dict(paper):
         "categories": paper.categories,
     }
 
-
-def search_papers(
-    query: str, page: int = 0, page_size: int = 10, sort_by: str = "relevance"
-):
-    """Search for papers using the arXiv API"""
-    logger.info(
-        f"📋 Received search request: query='{query}', page={page}, page_size={page_size}, sort_by={sort_by}"
-    )
-
-    # Map sort criteria to arxiv.SortCriterion
+def search_papers(query: str, page: int = 0, page_size: int = 10, sort_by: str = "relevance"):
+    logger.info(f"📋 Received search request: query='{query}', page={page}, page_size={page_size}, sort_by={sort_by}")
     sort_criterion = arxiv.SortCriterion.Relevance
     if sort_by == "submitted_date":
         sort_criterion = arxiv.SortCriterion.SubmittedDate
     elif sort_by == "last_updated":
         sort_criterion = arxiv.SortCriterion.LastUpdatedDate
 
-    # Calculate start index for pagination
     start = page * page_size
-
-    # Create client and search
     client = arxiv.Client()
-
-    # Create search query without start parameter
-    search = arxiv.Search(
-        query=query,
-        max_results=page_size + 1,  # Get one extra to check if there's a next page
-        sort_by=sort_criterion,
-    )
+    search = arxiv.Search(query=query, max_results=page_size + 1, sort_by=sort_criterion)
 
     try:
-        # Use the client's parameters to handle pagination
         results = list(client.results(search, offset=start))
-
-        # Check if there's a next page
         has_next_page = len(results) > page_size
-
-        # Trim to requested page size
         if has_next_page:
             results = results[:page_size]
-
-        # Convert to response format
         papers = [convert_paper_to_dict(paper) for paper in results]
-
         logger.info(f"✅ Found {len(papers)} papers for query '{query}'")
-
         return {
             "papers": papers,
-            "total_results": len(papers)
-            + (
-                page * page_size
-            ),  # Approximation since arXiv API doesn't provide total count
+            "total_results": len(papers) + (page * page_size),
             "page": page,
             "page_size": page_size,
             "has_next_page": has_next_page,
         }
-
     except Exception as e:
         logger.error(f"❌ Error processing search: {str(e)}")
         return {"error": str(e)}
 
-
 def get_paper(paper_id: str):
-    """Get a single paper by its arXiv ID"""
     logger.info(f"📋 Received paper request: id='{paper_id}'")
-
-    # Get data from DynamoDB
     dynamo_data = get_dynamo_summary(paper_id)
     if dynamo_data:
-        # Get metadata from arXiv
-        client = arxiv.Client()
-        search = arxiv.Search(id_list=[paper_id])
-        try:
-            paper = next(client.results(search))
-            logger.info(
-                f"Found paper '{paper_id}' in DynamoDB and retrieved metadata from arXiv"
-            )
+        if not dynamo_data.get("processing", False) and dynamo_data.get("summary", ""):
+            logger.info(f"Found completed paper '{paper_id}' with summary in DynamoDB")
+            return dynamo_data
+        elif dynamo_data.get("processing", False):
+            task_id = dynamo_data.get("task_id", "unknown")
+            logger.info(f"Paper '{paper_id}' is still being processed (task_id: {task_id})")
             return {
-                "arxiv_id": dynamo_data.get("arxiv_id", ""),
-                "pdf_url": dynamo_data.get("pdf_url", ""),
-                "summary": dynamo_data.get("summary", ""),
-                "processing": dynamo_data.get("processing", False),
-                "processing_error": dynamo_data.get("processing_error", None),
-                "title": paper.title,
-                "authors": [author.name for author in paper.authors],
+                "message": f"Task id {task_id} is under process right now",
+                "processing": True,
+                "arxiv_id": paper_id
             }
-        except Exception as e:
-            logger.error(f"Error getting paper metadata from arXiv: {str(e)}")
-            return {
-                "arxiv_id": dynamo_data.get("arxiv_id", ""),
-                "pdf_url": dynamo_data.get("pdf_url", ""),
-                "summary": dynamo_data.get("summary", ""),
-                "processing": dynamo_data.get("processing", False),
-                "processing_error": dynamo_data.get("processing_error", None),
-                "title": "",
-                "authors": [],
-            }
-
-    # If not in DynamoDB, return processing status
-    logger.info(
-        f"Paper '{paper_id}' not found in DynamoDB, returning processing status"
-    )
+    logger.info(f"No data found for paper '{paper_id}'")
     return {
-        "processing": True,
-        "arxiv_id": paper_id,
-        "pdf_url": "",
-        "summary": "",
-        "processing_error": None,
-        "title": "",
-        "authors": [],
+        "message": f"No data found for paper ID {paper_id}",
+        "arxiv_id": paper_id
     }
 
-
 def lambda_handler(event, context):
-    """AWS Lambda handler function"""
     logger.info(f"Received event: {json.dumps(event)}")
     cors_headers = {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-        "Access-Control-Allow-Methods": "POST,OPTIONS",
+        "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
     }
-    # Determine the path and HTTP method
+
     path = event.get("path", "")
     http_method = event.get("httpMethod", "GET")
-
-    # Get query parameters
     query_params = event.get("queryStringParameters", {}) or {}
 
-    # Handle health check
     if path == "/health":
         return {
             "statusCode": 200,
@@ -178,84 +110,66 @@ def lambda_handler(event, context):
             "body": json.dumps({"status": "healthy", "service": "arxiv-search-lambda"}),
         }
 
-    # Handle search
     elif path == "/search" and http_method == "GET":
         query = query_params.get("query", "")
         page = int(query_params.get("page", 0))
         page_size = int(query_params.get("page_size", 10))
         sort_by = query_params.get("sort_by", "relevance")
-
         result = search_papers(query, page, page_size, sort_by)
-
-        # Check if there was an error
         if "error" in result:
-            return {
-                "statusCode": 500,
-                "headers": cors_headers,
-                "body": json.dumps(result),
-            }
-
+            return {"statusCode": 500, "headers": cors_headers, "body": json.dumps(result)}
         return {"statusCode": 200, "headers": cors_headers, "body": json.dumps(result)}
 
-    # Handle paper retrieval
-    elif path.startswith("/paper/") and http_method == "GET":
-        # Extract paper ID from path
+    elif path.startswith("/paper/") and not path.startswith("/paper/hash") and http_method == "GET":
         paper_id = path.split("/paper/")[1]
-
         result = get_paper(paper_id)
+        if "message" in result and "No data found" in result.get("message", ""):
+            return {"statusCode": 404, "headers": cors_headers, "body": json.dumps(result)}
+        return {"statusCode": 200, "headers": cors_headers, "body": json.dumps(result)}
 
-        # Check if there was an error
-        if "error" in result and result["error"] == "Paper not found":
+    elif path == "/paper/hash" and http_method == "POST":
+        try:
+            body = json.loads(event.get("body", "{}"))
+            hash_id = body.get("hashId", "")
+            if not hash_id:
+                return {
+                    "statusCode": 400,
+                    "headers": cors_headers,
+                    "body": json.dumps({"error": "Missing 'hashId' in request body"})
+                }
+
+            response = table.query(
+                IndexName="hash-string-index",
+                KeyConditionExpression=Key("hash_string").eq(hash_id)
+            )
+            items = response.get("Items", [])
+            if not items:
+                return {
+                    "statusCode": 404,
+                    "headers": cors_headers,
+                    "body": json.dumps({"message": f"No paper found for hash ID {hash_id}"})
+                }
+
+            item = items[0]
+
             return {
-                "statusCode": 404,
+                "statusCode": 200,
                 "headers": cors_headers,
-                "body": json.dumps(result),
+                "body": json.dumps(item)
             }
-        elif "error" in result:
+
+        except Exception as e:
+            error_message = str(e)
+            logger.error(f"❌ Error querying hash_string-index (POST): {error_message}")
             return {
                 "statusCode": 500,
                 "headers": cors_headers,
-                "body": json.dumps(result),
+                "body": json.dumps({"error": f"Failed to fetch by hash ID: {error_message}"})
             }
 
-        return {"statusCode": 200, "headers": cors_headers, "body": json.dumps(result)}
-
-    # Handle unknown routes
     else:
         return {
             "statusCode": 404,
             "headers": cors_headers,
             "body": json.dumps({"error": f"Route not found: {path}"}),
         }
-
-
-# This allows the code to still be run locally using uvicorn
-# but it's not needed for Lambda deployment
-if __name__ == "__main__":
-    import uvicorn
-    from fastapi import FastAPI, Query
-
-    app = FastAPI()
-
-    @app.get("/search")
-    def api_search_papers(
-        query: str = Query(..., description="Search query"),
-        page: int = Query(0, description="Page number (0-based)"),
-        page_size: int = Query(10, description="Results per page"),
-        sort_by: str = Query(
-            "relevance",
-            description="Sort criterion: relevance, submitted_date, or last_updated",
-        ),
-    ):
-        return search_papers(query, page, page_size, sort_by)
-
-    @app.get("/paper/{paper_id}")
-    def api_get_paper(paper_id: str):
-        return get_paper(paper_id)
-
-    @app.get("/health")
-    def health_check():
-        return {"status": "healthy", "service": "arxiv-search-service"}
-
-    logger.info("🌐 Starting arXiv search service on http://0.0.0.0:8083")
-    uvicorn.run(app, host="0.0.0.0", port=8083)
