@@ -1,49 +1,87 @@
-# papergist
-Cloud Final Project
-
-071214564206 : AWS Account Id  
-AdminUser : AWS IAM (Read Only Access for now)
-SecurePassword123! : AWS Password
-
-EC2 SSH KEY : Let me know if you need it, I'll provide. You can observe Cloudwatch logs for EC2 behaviour for now.
-
-Search Endpoint : https://c6ydbiqqqe.execute-api.us-east-1.amazonaws.com/dev/search?query=machine+learning 
-^Pick one json from this 
-
-Enqueue Endpoint : 
-curl -X POST "https://c6ydbiqqqe.execute-api.us-east-1.amazonaws.com/dev/enqueue" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Lecture Notes: Optimization for Machine Learning",
-    "authors": ["Elad Hazan"],
-    "summary": "Lecture notes on optimization for machine learning, derived from a course at\nPrinceton University and tutorials given in MLSS, Buenos Aires, as well as\nSimons Foundation, Berkeley.",
-    "published": "2019-09-08T21:49:42+00:00",
-    "updated": "2019-09-08T21:49:42+00:00",
-    "pdf_url": "http://arxiv.org/pdf/1909.03550v1",
-    "arxiv_id": "1909.03550v1",
-    "primary_category": "cs.LG",
-    "categories": ["cs.LG","stat.ML"]
-  }'
-
-After this, you can observe the summary in S3 bucket and also in Dynamo Table
-link to diagram : https://lucid.app/lucidchart/25c26bdc-cafc-4d97-8e94-f57ed704905e/edit?viewport_loc=-881%2C-404%2C3088%2C1743%2C0_0&invitationId=inv_19800162-b825-4b73-89db-ed74cee52c53  
+🧠 Paper Gist: AI Research Paper Summarization Tool
+Paper Gist is a cost-efficient cloud-native platform to summarize long AI research papers using a GPU-hosted LLM—without incurring the high costs of commercial APIs like OpenAI or AWS Bedrock. It caches and reuses summaries to optimize both latency and expense.
 
 
-<img width="608" alt="image" src="https://github.com/user-attachments/assets/41611a56-e84e-4b18-b7c9-5816aa92a6ce" />
+🔍 Problem Statement
+Summarizing large academic PDFs through commercial LLM APIs becomes prohibitively expensive at scale. Each request processes entire documents, resulting in high inference costs even for repeated or duplicate uploads.
 
-# Cost Motivation in terms of scaling 
+✅ Key Features
+arXiv Search + Summarize: Users can search papers from arXiv and queue them for summarization.
 
-# Cost Comparison: Processing 1,000 Academic Papers Over One Month
+Manual Uploads: PDF/DOCX uploads supported; we check for existing cached summaries using hash-based matching.
 
-| Factor | GPU EC2 (On/Off) | LLM APIs | Amazon Bedrock |
-|--------|-----------------|----------|---------------|
-| **Average Paper Size** | ~10,000 tokens per research paper (15 pages) | ~10,000 tokens per research paper (15 pages) | ~10,000 tokens per research paper (15 pages) |
-| **Total Input Tokens** | 10M tokens | 10M tokens | 10M tokens |
-| **Output Tokens** | Not applicable | ~1M tokens (summary/analysis) | ~1M tokens (summary/analysis) |
-| **Hardware/Model** | g4dn.xlarge ($0.526/hour) | OpenAI GPT-4 or Claude | Amazon Titan or Claude models |
-| **Hourly Cost** | $0.526/hour for g4dn.xlarge | N/A (token-based) | N/A (on-demand) or $1-4/hour (provisioned) |
-| **Processing Time** | ~500 hours (estimate) | N/A | N/A |
-| **Token Pricing** | N/A | $0.01-0.03/1K input tokens<br>$0.03-0.06/1K output tokens | $0.001-0.01/1K input tokens<br>$0.003-0.03/1K output tokens |
-| **Monthly Fixed Costs** | Storage: ~$30-50 | None | None |
-| **Total Cost Estimate** | $263-$400 | $100,000-$300,000 | $10,000-$30,000 |
-| **Cost per Paper** | $0.26-$0.40 | $100-$300 | $10-$30 |
+GPU-Efficient Queue Execution: A scheduled queue triggers an EC2 G5 GPU instance only when needed, shutting it down automatically if idle.
+
+Caching Layer: Summaries are cached using DynamoDB (by arxiv_id or document hash) to avoid repeated summarization.
+
+Frontend: Lightweight HTML, CSS, and JS-based interface. Users can track their uploads via browser-local cache under “My Uploads”.
+
+🧱 Architecture Overview
+Component	Description
+Frontend	HTML/CSS/JS app for users to search, upload, and view summaries.
+Amazon API Gateway	Public HTTP interface to backend Lambda APIs (/search, /enqueue).
+Lambda Functions	Stateless compute for: checking database (search) and queuing new summarization tasks (enqueue).
+Amazon DynamoDB	Stores summaries with two indexes:
+• Primary Index: arxiv_id
+• GSI: hash_string for manual uploads
+S3 Bucket	Hosts user-uploaded PDFs and generates URLs for summarization.
+SQS Queue	Buffers summarization tasks before GPU processing.
+EventBridge	Triggers a Lambda every minute to check if GPU should start.
+EC2 G5 Instance	Runs combined-service.py which processes tasks using llama3.2:latest model.
+LLM	A hosted, optimized LLaMA-3.2 model for low-latency summarization.
+
+🚀 How It Works
+User searches arXiv or uploads a file from frontend.
+
+API Gateway routes the request to a Lambda:
+
+Checks DynamoDB for cached summary
+
+If not found, queues the task
+
+EventBridge runs every 1 min to check the queue.
+
+If queue has tasks:
+
+Starts EC2 GPU instance
+
+combined-service.py dequeues and summarizes
+
+Result is cached back into DynamoDB
+
+EC2 shuts itself down once queue is empty, saving costs.
+
+💡 Cost Optimization Strategy
+Avoids repeated summarization through strong caching.
+
+EC2 lifecycle controlled dynamically using queue length.
+
+No always-on LLM API billing — summarization only happens on demand.
+
+🔧 Technologies Used
+AWS EC2 (G5), Lambda, SQS, DynamoDB, S3, EventBridge
+
+Amazon API Gateway
+
+HTML/CSS/JavaScript (Frontend)
+
+Python (Backend)
+
+HuggingFace Transformers (llama3.2:latest)
+
+🛠 Possible Improvements
+🔐 Add authentication and session-based user tracking.
+
+⚡ Provide instant summarization APIs for premium users.
+
+🧠 Host stronger/faster LLM models as compute budget scales.
+
+🧾 Persist user history across devices (currently browser-local only).
+
+🔎 Add semantic search over summaries (Typesense/OpenSearch).
+
+📈 Highlight trending or most-requested papers to avoid repeated inference.
+
+📦 Local Setup (Coming Soon)
+We'll provide Docker + Terraform scripts to simulate local development + deploy on AWS.
+
