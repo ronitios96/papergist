@@ -1,7 +1,5 @@
 # 🧠 Paper Gist: AI Research Paper Summarization Tool
 
----
-
 ## 👥 Authors
 
 Built by:
