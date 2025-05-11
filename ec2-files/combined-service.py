@@ -148,7 +148,7 @@ def extract_entire_text(pdf_bytes: bytes) -> str:
     logger.info(f"✅ Text extracted in {time.time() - start_time:.2f}s, extracted {len(text)} characters")
     return text
 
-def generate_hash_string(text: str, char_limit: int = 100) -> str:
+def generate_hash_string(text: str, char_limit: int = 50) -> str:
     """Generate a hash string from the first N characters of the text."""
     # Take first char_limit characters, remove spaces, newlines, and make lowercase
     if len(text) < char_limit:
@@ -376,7 +376,7 @@ class GPUTaskProcessor:
             full_text = extract_entire_text(pdf_bytes)
             
             # Generate hash_string from first 100 characters
-            hash_string = generate_hash_string(full_text, 100)
+            hash_string = generate_hash_string(full_text, 50)
             logger.info(f"🔑 Generated hash string for arxiv_id {arxiv_id}")
             
             # Update DynamoDB with hash_string
