@@ -5,9 +5,6 @@
 Built by:
 
 - **Ronit Tushir** (`rt3068`)
-- **Erchi Zhang** (`ez806`)
-- **Joe Braha** (`jb7044`)
-- **Patrick Cheng** (`pc2720`)
 
 ---
 
